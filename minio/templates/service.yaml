@@ -6,10 +6,14 @@ metadata:
     {{- include "common.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.service.type }}
-  ports:
-    - port: {{ .Values.service.port }}
-      targetPort: http
-      protocol: TCP
-      name: http
   selector:
     {{- include "common.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: api
+      port: {{ .Values.service.apiPort }}
+      targetPort: 9000
+    {{- if .Values.service.exposeConsole }}
+    - name: console
+      port: {{ .Values.service.consolePort }}
+      targetPort: 9001
+    {{- end }}

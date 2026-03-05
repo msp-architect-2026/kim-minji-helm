@@ -2,7 +2,7 @@ nameOverride: ""
 fullnameOverride: ""
 
 image:
-  repository: frontend
+  repository: gitlab.local:5050/root/kim-minji-frontend
   tag: "test"
   pullPolicy: IfNotPresent
 

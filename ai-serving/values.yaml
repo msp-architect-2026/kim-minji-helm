@@ -4,7 +4,7 @@ fullnameOverride: ""
 replicaCount: 1
 
 image:
-  repository: ai-serving
+  repository: gitlab.local:5050/root/kim-minji-ai
   tag: "test"
   pullPolicy: IfNotPresent
 

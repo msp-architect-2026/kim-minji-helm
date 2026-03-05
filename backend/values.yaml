@@ -4,9 +4,12 @@ fullnameOverride: ""
 replicaCount: 1
 
 image:
-  repository: backend
-  tag: "test"
-  pullPolicy: IfNotPresent
+  repository: gitlab.local:5050/root/kim-minji-backend
+  tag: "latest"
+  pullPolicy: Always
+
+imagePullSecrets:
+  - name: gitlab-registry-secret
 
 service:
   type: ClusterIP
@@ -30,10 +33,10 @@ secret:
     DB_URL: DB_URL
     DB_USERNAME: DB_USERNAME
     DB_PASSWORD: DB_PASSWORD
-    AWS_ACCESS_KEY: AWS_ACCESS_KEY
-    AWS_SECRET_KEY: AWS_SECRET_KEY
-    AWS_REGION: AWS_REGION
-    AWS_BUCKET: AWS_BUCKET
+    MINIO_ACCESS_KEY: MINIO_ACCESS_KEY
+    MINIO_SECRET_KEY: MINIO_SECRET_KEY
+    MINIO_ENDPOINT: MINIO_ENDPOINT
+    MINIO_BUCKET: MINIO_BUCKET
 
 probes:
   enabled: true

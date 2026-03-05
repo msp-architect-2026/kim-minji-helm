@@ -25,7 +25,7 @@ resources:
 
 env:
   SPRING_PROFILES_ACTIVE: "prod"
-  AI_SERVER_URL: "http://ai-serving:8000"
+  AI_SERVER_URL: "http://kim-minji-ai-serving-ai-serving.ai-serving.svc.cluster.local:8000"
 
 secret:
   name: backend-secret

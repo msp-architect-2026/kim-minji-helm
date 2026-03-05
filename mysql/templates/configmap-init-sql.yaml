@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "common.fullname" . }}-init-sql
+  labels:
+    {{- include "common.labels" . | nindent 4 }}
+data:
+  schema.sql: |
+    CREATE DATABASE IF NOT EXISTS waferdb;
+    USE waferdb;
+
+    CREATE TABLE IF NOT EXISTS wafer_images (
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+      file_name VARCHAR(255) NOT NULL,
+      minio_path VARCHAR(500) NOT NULL,
+      uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS inference_results (
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+      image_id BIGINT NOT NULL,
+      defect_class VARCHAR(100),
+      confidence DOUBLE,
+      inferred_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (image_id) REFERENCES wafer_images(id)
+    );

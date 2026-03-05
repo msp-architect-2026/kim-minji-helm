@@ -15,28 +15,6 @@ spec:
       labels:
         {{- include "common.selectorLabels" . | nindent 8 }}
     spec:
-      initContainers:                          # ← 추가
-        - name: init-schema
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          command:
-            - sh
-            - -c
-            - |
-              mysql -h 127.0.0.1 -u root -p$MYSQL_ROOT_PASSWORD $MYSQL_DATABASE < /init-sql/schema.sql
-          env:
-            - name: MYSQL_ROOT_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.secret.name }}
-                  key: {{ .Values.secret.keys.rootPassword }}
-            - name: MYSQL_DATABASE
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.secret.name }}
-                  key: {{ .Values.secret.keys.database }}
-          volumeMounts:
-            - name: init-sql
-              mountPath: /init-sql
 
       containers:
         - name: mysql
@@ -85,9 +63,6 @@ spec:
           {{- end }}
 
       volumes:                                 # ← 추가
-        - name: init-sql
-          configMap:
-            name: {{ include "common.fullname" . }}-init-sql
   volumeClaimTemplates:
     - metadata:
         name: data

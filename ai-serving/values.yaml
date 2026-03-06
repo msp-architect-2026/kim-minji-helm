@@ -40,3 +40,5 @@ hpa:
   maxReplicas: 4
   targetCPUUtilizationPercentage: 70
 
+nodeSelector:
+  kubernetes.io/hostname: k3s-ai1

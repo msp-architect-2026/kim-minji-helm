@@ -18,6 +18,10 @@ spec:
       nodeSelector:
         {{- toYaml .Values.nodeSelector | nindent 8 }}
       {{- end }}
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      {{- end }}
       containers:
         - name: ai-serving
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -27,7 +31,13 @@ spec:
               containerPort: 8000
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-
+          {{- if .Values.env }}
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          {{- end }}
           {{- if .Values.probes.enabled }}
           readinessProbe:
             httpGet:

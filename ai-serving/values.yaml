@@ -20,7 +20,11 @@ resources:
     cpu: 1500m
     memory: 1Gi
 
-env: {}
+env:
+  MINIO_ENDPOINT: "http://minio-minio.storage.svc.cluster.local:9000"
+  MODEL_BUCKET: "wafer-model"
+  MODEL_KEY: "wafer_defect_model.h5"
+  
 secretEnv: {}
 
 probes:

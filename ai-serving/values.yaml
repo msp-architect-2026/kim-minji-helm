@@ -6,7 +6,7 @@ replicaCount: 1
 image:
   repository: gitlab.local:5050/root/kim-minji-ai
   tag: "latest"
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 service:
   type: ClusterIP

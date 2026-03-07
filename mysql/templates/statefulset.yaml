@@ -41,7 +41,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.secret.name }}
-                  key: {{ .Values.secret.keys.password }}
+                  key: {{ .Values.secret.keys.username }}
             - name: MYSQL_PASSWORD
               valueFrom:
                 secretKeyRef:

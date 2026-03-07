@@ -36,7 +36,7 @@ secret:
     MINIO_ENDPOINT: "http://minio-minio.storage.svc.cluster.local:9000"
     MINIO_ACCESS_KEY: "minioadmin"
     MINIO_SECRET_KEY: "minioadmin123"
-    MINIO_BUCKET: "wafer-image-bucket"
+    MINIO_BUCKET: "wafer-images"
 
 probes:
   enabled: true

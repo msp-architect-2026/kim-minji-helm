@@ -30,10 +30,10 @@ env:
 secret:
   name: backend-secret
   initialValues:
-    DB_URL: "jdbc:mysql://mysql.storage.svc.cluster.local:3306/appdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+    DB_URL: "jdbc:mysql://mysql-mysql.storage.svc.cluster.local:3306/appdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
     DB_USERNAME: "appuser"
     DB_PASSWORD: "apppass123"
-    MINIO_ENDPOINT: "http://minio.storage.svc.cluster.local:9000"
+    MINIO_ENDPOINT: "http://minio-minio.storage.svc.cluster.local:9000"
     MINIO_ACCESS_KEY: "minioadmin"
     MINIO_SECRET_KEY: "minioadmin123"
     MINIO_BUCKET: "wafer-image-bucket"

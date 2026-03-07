@@ -54,3 +54,6 @@ probes:
 
 initSchema:
   enabled: false
+
+nodeSelector:
+  kubernetes.io/hostname: k3s-w1  

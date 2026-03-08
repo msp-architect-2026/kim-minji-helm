@@ -5,7 +5,7 @@ replicaCount: 1
 
 image:
   repository: gitlab.local:5050/root/kim-minji-backend
-  tag: "latest"
+  tag: "d90c5010"
   pullPolicy: Always
 
 imagePullSecrets:

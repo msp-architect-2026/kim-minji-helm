@@ -5,7 +5,7 @@ replicaCount: 1
 
 image:
   repository: gitlab.local:5050/root/kim-minji-ai
-  tag: "latest"
+  tag: "1e956c8c"
   pullPolicy: Always
 
 service:

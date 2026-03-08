@@ -5,7 +5,7 @@ replicaCount: 1
 
 image:
   repository: gitlab.local:5050/root/kim-minji-backend
-  tag: "fd121da7"
+  tag: "ff204cbc"
   pullPolicy: Always
 
 imagePullSecrets:

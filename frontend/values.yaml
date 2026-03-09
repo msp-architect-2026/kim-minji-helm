@@ -3,7 +3,7 @@ fullnameOverride: ""
 
 image:
   repository: gitlab.local:5050/root/kim-minji-frontend
-  tag: "0b11984b"
+  tag: "861df825"
   pullPolicy: IfNotPresent
 
 replicaCount: 1

@@ -32,13 +32,13 @@ probes:
   enabled: true
   readiness:
     path: /health
-    initialDelaySeconds: 30
-    periodSeconds: 15
+    initialDelaySeconds: 60
+    periodSeconds: 10
     timeoutSeconds: 10
-    failureThreshold: 6
+    failureThreshold: 12
   liveness:
     path: /health
-    initialDelaySeconds: 60
+    initialDelaySeconds: 120
     periodSeconds: 30
     timeoutSeconds: 10
     failureThreshold: 6
@@ -53,4 +53,4 @@ nodeSelector:
   kubernetes.io/hostname: k3s-ai2
 
 imagePullSecrets:
-  - name: gitlab-registry-secret  
+  - name: gitlab-registry-secret

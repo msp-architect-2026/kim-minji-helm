@@ -22,6 +22,16 @@ GitLab CI 파이프라인이 빌드 후 이 레포의 `values.yaml`에 이미지
 
 <br>
 
+## ▍관련 레포지토리
+
+| Repository | 설명 |
+|------------|------|
+| [kim-minji-wiki](https://github.com/msp-architect-2026/kim-minji-wiki) | 프로젝트 메인 (Wiki, 칸반보드) |
+| [kim-minji-infra](https://github.com/msp-architect-2026/kim-minji-infra) | k3s 클러스터 및 GitOps 인프라 |
+| [kim-minji-backend](https://github.com/msp-architect-2026/kim-minji-backend) | Spring Boot API 서버 |
+| [kim-minji-frontend](https://github.com/msp-architect-2026/kim-minji-frontend) | React 웹 대시보드 |
+| [kim-minji-ai](https://github.com/msp-architect-2026/kim-minji-ai) | FastAPI AI 추론 서비스 |
+
 ## ▍레포 구조
 
 ```
@@ -209,12 +219,5 @@ CoreDNS custom 설정(`gitlab.local → 192.168.0.157`)으로 클러스터 내�
 
 <br>
 
-## ▍관련 레포지토리
 
-| Repository | 설명 |
-|------------|------|
-| [kim-minji](https://github.com/msp-architect-2026/kim-minji) | 프로젝트 메인 (Wiki, 칸반보드) |
-| [kim-minji-infra](https://github.com/msp-architect-2026/kim-minji-infra) | k3s 클러스터 및 GitOps 인프라 |
-| [kim-minji-backend](https://github.com/msp-architect-2026/kim-minji-backend) | Spring Boot API 서버 |
-| [kim-minji-frontend](https://github.com/msp-architect-2026/kim-minji-frontend) | React 웹 대시보드 |
-| [kim-minji-ai](https://github.com/msp-architect-2026/kim-minji-ai) | FastAPI AI 추론 서비스 |
+

@@ -104,6 +104,7 @@ kim-minji-helm/
 | Liveness Probe | `/actuator/health`, initialDelay 20s |
 | Secret | SealedSecret (`backend-secret`) |
 | ServiceMonitor | `/actuator/prometheus`, 30s interval |
+| dnsConfig | `ndots: 2` (FQDN 서비스 주소를 search domain 확장 없이 조회) |
 
 ### ai-serving
 
@@ -118,6 +119,7 @@ kim-minji-helm/
 | Readiness Probe | `/health`, initialDelay 60s, period 10s, failureThreshold 12 |
 | Liveness Probe | `/health`, initialDelay 120s, period 30s, failureThreshold 6 |
 | ServiceMonitor | `/metrics`, 30s interval |
+| dnsConfig | `ndots: 2` (FQDN 서비스 주소를 search domain 확장 없이 조회) |
 
 ### mysql
 

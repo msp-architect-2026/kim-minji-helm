@@ -21,6 +21,12 @@ resources:
     cpu: 1500m
     memory: 3Gi
 
+# 점 2개 이상인 이름(*.svc.cluster.local 등)은 search domain을 붙이지 않고 바로 조회
+dnsConfig:
+  options:
+    - name: ndots
+      value: "2"
+
 env:
   MINIO_ENDPOINT: "http://minio-minio.storage.svc.cluster.local:9000"
   MODEL_BUCKET: "wafer-model"

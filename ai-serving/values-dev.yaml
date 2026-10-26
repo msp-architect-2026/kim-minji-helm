@@ -1,0 +1,25 @@
+# dev 프로파일: 노드 1~2대만 켠 개발 환경
+# 메모리 1Gi 이하에서 모델 로딩이 되는지는 클러스터에서 확인 필요 (RUNBOOK 확정 필요 C2)
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+hpa:
+  minReplicas: 1
+  maxReplicas: 2
+
+# k3s-ai2가 켜져 있으면 그쪽에, 꺼져 있으면 다른 노드에 뜬다
+affinity:
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        preference:
+          matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - k3s-ai2

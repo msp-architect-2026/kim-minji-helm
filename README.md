@@ -221,5 +221,13 @@ CoreDNS custom 설정(`gitlab.local → 192.168.0.157`)으로 클러스터 내�
 
 <br>
 
+## ▍정적 검증
 
+```bash
+scripts/validate.sh          # dev, full 모두
+scripts/validate.sh dev      # 특정 프로파일만
+```
 
+- 클러스터 접속 없이 차트별로 `helm lint`, `helm template`, `kubeconform`, `yamllint`를 실행합니다. 대상은 `scripts/releases.txt`에 등록합니다.
+- 차트의 `ci/test-values.yaml`은 검증 전용 더미 값(SealedSecret 암호문 자리 등)이며 배포에는 쓰지 않습니다.
+- 클러스터 작업 순서는 [kim-minji-infra `docs/RUNBOOK.md`](https://github.com/msp-architect-2026/kim-minji-infra/blob/develop/docs/RUNBOOK.md)를 따릅니다.

@@ -74,7 +74,7 @@ kim-minji-helm/
         ├── statefulset.yaml
         ├── service.yaml
         ├── pvc.yaml
-        └── secret.yaml
+        └── secret.yaml         # SealedSecret
 ```
 
 <br>
@@ -159,6 +159,7 @@ kim-minji-helm/
 | CPU requests / limits | 200m / 600m |
 | Memory requests / limits | 256Mi / 512Mi |
 | apiPort / consolePort | 9000 / 9001 |
+| Secret | SealedSecret (`minio-secret`: accessKey, secretKey) |
 | Probe | `/minio/health/live`, `/minio/health/ready` |
 
 <br>
@@ -213,6 +214,31 @@ Git push → 자동 배포는 되지만, 수동 변경은 자동 복구하지 �
 - Git에는 `SealedSecret` 리소스(암호문)만 저장
 - 클러스터 내 Sealed Secrets controller가 복호화 → `Secret` 생성
 - ArgoCD GitOps로 배포 및 복호화 동작 검증 완료
+
+<br>
+
+## ▍minio SealedSecret 생성
+
+`minio/templates/secret.yaml`은 `values.yaml`의 `sealedSecret.encryptedData`(`accessKey`, `secretKey`)로 SealedSecret을 렌더링합니다. 값이 비어 있으면 렌더링이 실패합니다.
+
+MinIO 데이터는 이미 현재 루트 계정으로 초기화되어 있으므로 **클러스터에 있는 `minio-secret` 값 그대로** 암호화합니다. 클러스터 노드에서 실행합니다.
+
+```bash
+NS=storage; NAME=minio-secret
+for k in accessKey secretKey; do
+  v=$(kubectl -n $NS get secret $NAME -o jsonpath="{.data.$k}" | base64 -d)
+  printf '    %s: %s\n' "$k" "$(printf '%s' "$v" | kubeseal --raw --namespace $NS --name $NAME --from-file=/dev/stdin)"
+done
+```
+
+출력된 2줄을 `minio/values.yaml`의 `sealedSecret.encryptedData: {}`에서 `{}`를 지운 뒤 그 아래에 붙여 넣습니다.  
+기존 `minio-secret`은 수동으로 만든 Secret이라 controller가 덮어쓰지 않습니다. 첫 배포 전에 소유권을 넘깁니다.
+
+```bash
+kubectl -n storage annotate secret minio-secret sealedsecrets.bitnami.com/managed=true
+```
+
+적용 순서와 주의사항은 mysql과 같습니다 (annotate → 암호문 커밋 → ArgoCD sync, SealedSecret cascade 삭제 시 Secret도 삭제).
 
 <br>
 

@@ -26,7 +26,7 @@ resources:
     cpu: 1000m
     memory: 1Gi
 
-# 민감정보는 Secret로 분리 (추후 SealedSecret로 감싸기 쉬운 형태)
+# 민감정보는 SealedSecret으로 관리 (평문 커밋 금지)
 secret:
   name: mysql-secret
   keys:
@@ -34,6 +34,15 @@ secret:
     database: MYSQL_DATABASE
     username: MYSQL_USER
     password: MYSQL_PASSWORD
+
+# kubeseal로 암호화한 값. 키 이름은 secret.keys와 같아야 한다.
+# 생성 방법: README "mysql SealedSecret 생성" 참고
+sealedSecret:
+  encryptedData: {}
+    # MYSQL_ROOT_PASSWORD: AgB...
+    # MYSQL_DATABASE: AgB...
+    # MYSQL_USER: AgB...
+    # MYSQL_PASSWORD: AgB...
 
 config:
   name: mysql-config

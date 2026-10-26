@@ -68,3 +68,9 @@ tolerations:
 
 imagePullSecrets:
   - name: gitlab-registry-secret
+
+# full: HPA로 2개 이상일 때 drain이 한 번에 모두 내리지 않게 한다 (k3s-ai2 고정이라 노드 분산은 없음)
+pdb:
+  enabled: false
+  minAvailable: null
+  maxUnavailable: 1

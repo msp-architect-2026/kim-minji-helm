@@ -52,3 +52,11 @@ autoscaling:
   minReplicas: 1
   maxReplicas: 5
   targetCPUUtilizationPercentage: 80
+
+# 워크로드 HA. 값은 프로파일 파일에서 정한다 (dev: ScheduleAnyway·PDB 없음 / full: DoNotSchedule·PDB)
+topologySpread:
+  enabled: true
+  whenUnsatisfiable: ScheduleAnyway
+pdb:
+  enabled: false
+  minAvailable: 1

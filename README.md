@@ -225,6 +225,9 @@ controller가 `kube-system/sealed-secrets-controller`가 아니면 `kubeseal`에
 kubectl -n storage annotate secret mysql-secret sealedsecrets.bitnami.com/managed=true
 ```
 
+적용 순서는 **annotate → 암호문 values 커밋 → ArgoCD sync**입니다. annotate 전에 sync되면 controller가 `already exists and is not managed by SealedSecret` 오류를 내고 기존 Secret을 그대로 둡니다(데이터 손실 없음).  
+전환 후 `mysql-secret`은 SealedSecret이 소유하므로, SealedSecret이나 mysql 앱을 cascade 삭제하면 Secret도 함께 지워져 MySQL Pod 재시작이 실패합니다.
+
 <br>
 
 ## ▍GitLab Registry 연동

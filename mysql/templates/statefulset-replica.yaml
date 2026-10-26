@@ -18,7 +18,7 @@ spec:
       labels:
         {{- include "mysql.replicaSelectorLabels" . | nindent 8 }}
       annotations:
-        checksum/mysqld-config: {{ include (print $.Template.BasePath "/configmap-mysqld.yaml") . | sha256sum }}
+        checksum/mysqld-config: {{ include "mysql.replicaCnf" . | sha256sum }}
     spec:
       # primary와 다른 노드에 둔다 (노드 1대 장애 시 한쪽은 남게)
       affinity:

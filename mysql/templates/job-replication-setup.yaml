@@ -1,8 +1,9 @@
-{{- if .Values.replication.enabled }}
+{{- if and .Values.replication.enabled (not .Values.failover.promoted) }}
 # ArgoCD sync 후마다 실행되는 복제 설정 Job (멱등).
 #  1) primary: 복제 계정(REPLICATION SLAVE, clone donor용 BACKUP_ADMIN) 생성·비밀번호 동기화
-#  2) replica에 복제 설정이 없으면: clone으로 primary 데이터 복사 → (replica mysqld 자동 재시작) → GTID 자동 위치로 복제 시작
-#  3) replica를 super_read_only로 고정
+#  2) replica에 복제 설정이 없고 **사용자 데이터도 없으면**: clone으로 primary 데이터 복사 → (replica mysqld 자동 재시작)
+#     → clone 완료 확인 → GTID 자동 위치로 복제 시작. 데이터가 있으면(승격된 서버 등) 덮어쓰지 않고 실패한다
+#  3) replica를 super_read_only로 고정, IO·SQL 스레드가 모두 정상인지 확인
 {{- $primary := printf "%s.%s.svc.cluster.local" (include "common.fullname" .) .Release.Namespace }}
 {{- $replica := printf "%s-replica.%s.svc.cluster.local" (include "common.fullname" .) .Release.Namespace }}
 apiVersion: batch/v1
@@ -60,19 +61,34 @@ spec:
               wait_for "$REPLICA"
               configured=$(q "$REPLICA" "SELECT COUNT(*) FROM performance_schema.replication_connection_configuration")
               if [ "$configured" = "0" ]; then
+                user_schemas=$(q "$REPLICA" "SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name NOT IN ('mysql','sys','information_schema','performance_schema')")
+                if [ "$user_schemas" != "0" ]; then
+                  echo "replica에 복제 설정은 없는데 사용자 데이터가 있다 (수동 failover로 승격된 서버일 수 있음) → clone하지 않고 중단"
+                  echo "의도한 재구성이라면 replica PVC를 지우고 다시 sync한다 (infra RUNBOOK 4.9)"
+                  exit 1
+                fi
                 echo "replica 초기 동기화(clone) 시작"
-                # clone이 끝나면 replica mysqld가 종료되고 kubelet이 컨테이너를 다시 띄운다 → 접속 끊김 오류는 무시
+                # clone이 끝나면 replica mysqld가 종료되고 kubelet이 컨테이너를 다시 띄운다 → 접속 끊김 오류는 무시하고 아래에서 결과를 확인
                 q "$REPLICA" "SET GLOBAL clone_valid_donor_list='${PRIMARY}:3306';
                               CLONE INSTANCE FROM '${REPL_USER}'@'${PRIMARY}':3306 IDENTIFIED BY '${REPL_PASSWORD}';" || true
                 sleep 15
                 wait_for "$REPLICA"
+                clone_state=$(q "$REPLICA" "SELECT STATE FROM performance_schema.clone_status" || true)
+                [ "$clone_state" = "Completed" ] || { echo "clone 실패: STATE=${clone_state:-없음}"; q "$REPLICA" "SELECT ERROR_NO, ERROR_MESSAGE FROM performance_schema.clone_status" || true; exit 1; }
                 q "$REPLICA" "CHANGE REPLICATION SOURCE TO SOURCE_HOST='${PRIMARY}', SOURCE_PORT=3306,
                                 SOURCE_USER='${REPL_USER}', SOURCE_PASSWORD='${REPL_PASSWORD}',
                                 SOURCE_AUTO_POSITION=1, GET_SOURCE_PUBLIC_KEY=1;
                               START REPLICA;"
               fi
               q "$REPLICA" "SET PERSIST super_read_only=ON;"
+              # START REPLICA 직후에는 CONNECTING일 수 있어 최대 60초 기다린다
+              for i in $(seq 1 12); do
+                io=$(q "$REPLICA" "SELECT SERVICE_STATE FROM performance_schema.replication_connection_status")
+                sql=$(q "$REPLICA" "SELECT SERVICE_STATE FROM performance_schema.replication_applier_status")
+                errs=$(q "$REPLICA" "SELECT COUNT(*) FROM performance_schema.replication_applier_status_by_worker WHERE LAST_ERROR_NUMBER <> 0")
+                [ "$io" = "ON" ] && [ "$sql" = "ON" ] && [ "$errs" = "0" ] && break
+                sleep 5
+              done
               q "$REPLICA" "SHOW REPLICA STATUS\G" | grep -E "Replica_IO_Running|Replica_SQL_Running|Seconds_Behind_Source|Last_.*Error:"
-              io=$(q "$REPLICA" "SELECT SERVICE_STATE FROM performance_schema.replication_connection_status")
-              [ "$io" = "ON" ] || { echo "복제 IO 스레드가 ON이 아님: $io"; exit 1; }
+              [ "$io" = "ON" ] && [ "$sql" = "ON" ] && [ "$errs" = "0" ] || { echo "복제 비정상: IO=${io} SQL=${sql} 오류 워커=${errs}"; exit 1; }
 {{- end }}

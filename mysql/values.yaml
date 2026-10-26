@@ -87,5 +87,10 @@ replication:
   # 초기 동기화·복제 설정 Job(PostSync hook)이 쓰는 클라이언트 이미지
   setupImage: mysql:8.0
 
+# 수동 failover 상태 (infra RUNBOOK 4.9). true면 primary Service가 replica를 가리키고 복제 설정 Job을 만들지 않는다.
+# Git으로 바꿔야 ArgoCD sync가 되돌리지 않는다
+failover:
+  promoted: false
+
 # 노드 고정 없음. local-path PV는 PV의 nodeAffinity가 배치 노드를 정한다 (Longhorn 전환 후에는 어느 노드든 가능)
 nodeSelector: {}  

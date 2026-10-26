@@ -15,7 +15,7 @@ spec:
       labels:
         {{- include "common.selectorLabels" . | nindent 8 }}
       annotations:
-        checksum/mysqld-config: {{ include (print $.Template.BasePath "/configmap-mysqld.yaml") . | sha256sum }}
+        checksum/mysqld-config: {{ include "mysql.primaryCnf" . | sha256sum }}
     spec:
       {{- if .Values.nodeSelector }}
       nodeSelector:

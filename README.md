@@ -144,7 +144,7 @@ kim-minji-helm/
 | image | `mysql:8.0` |
 | nodeSelector | 없음 (PV nodeAffinity를 따름) |
 | PVC | 10Gi, ReadWriteOnce, StorageClass `longhorn` (dev 복제 1 / full 2) |
-| 복제 | dev: 없음 · full: GTID 비동기 replica 1대(`mysql-mysql-replica`, super_read_only, clone으로 초기 동기화, 수동 failover) |
+| 복제 | dev: 없음 · full: GTID 비동기 replica 1대(`mysql-mysql-replica`, super_read_only, clone으로 초기 동기화). 수동 failover는 `failover.promoted: true`를 Git에 커밋 (infra RUNBOOK 4.9) |
 | binlog/GTID | 프로파일 공통 ON, binlog 3일 보관 |
 | CPU requests / limits | 200m / 1000m |
 | Memory requests / limits | 512Mi / 1Gi |
@@ -236,10 +236,11 @@ done
 
 출력된 4줄을 `mysql/values.yaml`의 `sealedSecret.encryptedData: {}`에서 `{}`를 지운 뒤 그 아래에 붙여 넣습니다.
 
-full 프로파일(replica)을 쓰려면 복제 계정 비밀번호 `MYSQL_REPLICATION_PASSWORD`도 추가합니다 (새 값으로 생성, 설정 Job이 primary에 계정을 만든다).
+full 프로파일(replica)을 쓰려면 복제 계정 비밀번호 `MYSQL_REPLICATION_PASSWORD`도 추가합니다 (새 값으로 생성, 설정 Job이 primary에 계정을 만든다).  
+비밀번호는 SQL 문자열에 그대로 들어가므로 따옴표·역슬래시가 없는 값을 씁니다 (예: `openssl rand -hex 24`).
 
 ```bash
-read -r -s -p "복제 계정 비밀번호: " RPW; echo   # bash에서 실행
+RPW=$(openssl rand -hex 24)   # bash에서 실행
 printf '    MYSQL_REPLICATION_PASSWORD: %s\n' "$(printf '%s' "$RPW" | kubeseal --raw --namespace storage --name mysql-secret --from-file=/dev/stdin)"
 ```  
 controller가 `kube-system/sealed-secrets-controller`가 아니면 `kubeseal`에 `--controller-namespace`, `--controller-name`을 추가합니다.

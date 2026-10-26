@@ -18,6 +18,11 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | quote }}
 {{- end -}}
 
+{{- define "mysql.replicaSelectorLabels" -}}
+app.kubernetes.io/name: {{ include "common.name" . }}-replica
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end -}}
+
 {{- define "common.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "common.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}

@@ -1,0 +1,78 @@
+{{- if .Values.replication.enabled }}
+# ArgoCD sync 후마다 실행되는 복제 설정 Job (멱등).
+#  1) primary: 복제 계정(REPLICATION SLAVE, clone donor용 BACKUP_ADMIN) 생성·비밀번호 동기화
+#  2) replica에 복제 설정이 없으면: clone으로 primary 데이터 복사 → (replica mysqld 자동 재시작) → GTID 자동 위치로 복제 시작
+#  3) replica를 super_read_only로 고정
+{{- $primary := printf "%s.%s.svc.cluster.local" (include "common.fullname" .) .Release.Namespace }}
+{{- $replica := printf "%s-replica.%s.svc.cluster.local" (include "common.fullname" .) .Release.Namespace }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "common.fullname" . }}-replication-setup
+  labels:
+    {{- include "common.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 1800
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "common.name" . }}-replication-setup
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: setup
+          image: {{ .Values.replication.setupImage }}
+          env:
+            - name: PRIMARY
+              value: {{ $primary }}
+            - name: REPLICA
+              value: {{ $replica }}
+            - name: REPL_USER
+              value: {{ .Values.replication.user }}
+            - name: MYSQL_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret.name }}
+                  key: {{ .Values.secret.keys.rootPassword }}
+            - name: REPL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret.name }}
+                  key: {{ .Values.secret.keys.replicationPassword }}
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -euo pipefail
+              wait_for() { until mysqladmin ping -h "$1" -uroot --silent; do echo "대기: $1"; sleep 5; done; }
+              q() { mysql -h "$1" -uroot -N -B -e "$2"; }
+
+              wait_for "$PRIMARY"
+              q "$PRIMARY" "CREATE USER IF NOT EXISTS '${REPL_USER}'@'%' IDENTIFIED BY '${REPL_PASSWORD}';
+                            ALTER USER '${REPL_USER}'@'%' IDENTIFIED BY '${REPL_PASSWORD}';
+                            GRANT REPLICATION SLAVE, BACKUP_ADMIN ON *.* TO '${REPL_USER}'@'%';"
+
+              wait_for "$REPLICA"
+              configured=$(q "$REPLICA" "SELECT COUNT(*) FROM performance_schema.replication_connection_configuration")
+              if [ "$configured" = "0" ]; then
+                echo "replica 초기 동기화(clone) 시작"
+                # clone이 끝나면 replica mysqld가 종료되고 kubelet이 컨테이너를 다시 띄운다 → 접속 끊김 오류는 무시
+                q "$REPLICA" "SET GLOBAL clone_valid_donor_list='${PRIMARY}:3306';
+                              CLONE INSTANCE FROM '${REPL_USER}'@'${PRIMARY}':3306 IDENTIFIED BY '${REPL_PASSWORD}';" || true
+                sleep 15
+                wait_for "$REPLICA"
+                q "$REPLICA" "CHANGE REPLICATION SOURCE TO SOURCE_HOST='${PRIMARY}', SOURCE_PORT=3306,
+                                SOURCE_USER='${REPL_USER}', SOURCE_PASSWORD='${REPL_PASSWORD}',
+                                SOURCE_AUTO_POSITION=1, GET_SOURCE_PUBLIC_KEY=1;
+                              START REPLICA;"
+              fi
+              q "$REPLICA" "SET PERSIST super_read_only=ON;"
+              q "$REPLICA" "SHOW REPLICA STATUS\G" | grep -E "Replica_IO_Running|Replica_SQL_Running|Seconds_Behind_Source|Last_.*Error:"
+              io=$(q "$REPLICA" "SELECT SERVICE_STATE FROM performance_schema.replication_connection_status")
+              [ "$io" = "ON" ] || { echo "복제 IO 스레드가 ON이 아님: $io"; exit 1; }
+{{- end }}

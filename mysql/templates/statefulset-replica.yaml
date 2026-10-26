@@ -1,0 +1,100 @@
+{{- if .Values.replication.enabled }}
+# full 프로파일 전용 읽기 전용 replica. 데이터는 설정 Job(job-replication-setup.yaml)이 clone으로 채운다.
+# selector가 primary와 달라 backend가 쓰는 Service(primary)에는 포함되지 않는다.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "common.fullname" . }}-replica
+  labels:
+    {{- include "common.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "common.fullname" . }}-replica
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "mysql.replicaSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "mysql.replicaSelectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/mysqld-config: {{ include (print $.Template.BasePath "/configmap-mysqld.yaml") . | sha256sum }}
+    spec:
+      # primary와 다른 노드에 둔다 (노드 1대 장애 시 한쪽은 남게)
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    {{- include "common.selectorLabels" . | nindent 20 }}
+      containers:
+        - name: mysql
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: mysql
+              containerPort: 3306
+          env:
+            # clone 후에는 primary의 계정(root 포함)이 그대로 복사된다
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret.name }}
+                  key: {{ .Values.secret.keys.rootPassword }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+            - name: mysqld-config
+              mountPath: /etc/mysql/conf.d/wafer.cnf
+              subPath: replica.cnf
+          resources:
+            {{- toYaml .Values.replication.resources | nindent 12 }}
+          {{- if .Values.probes.enabled }}
+          readinessProbe:
+            exec:
+              command: ["sh","-c","mysqladmin ping -h 127.0.0.1 -p$MYSQL_ROOT_PASSWORD"]
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+          livenessProbe:
+            exec:
+              command: ["sh","-c","mysqladmin ping -h 127.0.0.1 -p$MYSQL_ROOT_PASSWORD"]
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+          {{- end }}
+      volumes:
+        - name: mysqld-config
+          configMap:
+            name: {{ include "common.fullname" . }}-mysqld
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          {{- include "common.labels" . | nindent 10 }}
+      spec:
+        accessModes: {{ toYaml .Values.persistence.accessModes | nindent 10 }}
+        {{- if .Values.persistence.storageClassName }}
+        storageClassName: {{ .Values.persistence.storageClassName }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "common.fullname" . }}-replica
+  labels:
+    {{- include "common.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: mysql
+      protocol: TCP
+      name: mysql
+  selector:
+    {{- include "mysql.replicaSelectorLabels" . | nindent 4 }}
+{{- end }}

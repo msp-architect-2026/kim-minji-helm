@@ -14,6 +14,8 @@ spec:
     metadata:
       labels:
         {{- include "common.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/mysqld-config: {{ include (print $.Template.BasePath "/configmap-mysqld.yaml") . | sha256sum }}
     spec:
       {{- if .Values.nodeSelector }}
       nodeSelector:
@@ -50,6 +52,9 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/mysql
+            - name: mysqld-config
+              mountPath: /etc/mysql/conf.d/wafer.cnf
+              subPath: primary.cnf
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- if .Values.probes.enabled }}
@@ -64,6 +69,10 @@ spec:
             initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
           {{- end }}
+      volumes:
+        - name: mysqld-config
+          configMap:
+            name: {{ include "common.fullname" . }}-mysqld
 
   volumeClaimTemplates:
     - metadata:

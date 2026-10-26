@@ -7,7 +7,7 @@ metadata:
   labels:
     {{- include "frontend.labels" . | nindent 4 }}
 spec:
-  {{- if .Values.pdb.minAvailable }}
+  {{- if not (kindIs "invalid" .Values.pdb.minAvailable) }}
   minAvailable: {{ .Values.pdb.minAvailable }}
   {{- else }}
   maxUnavailable: {{ .Values.pdb.maxUnavailable }}

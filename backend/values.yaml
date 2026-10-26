@@ -53,6 +53,18 @@ autoscaling:
   maxReplicas: 5
   targetCPUUtilizationPercentage: 80
 
+# AI 전용 노드(k3s-ai2)에는 두지 않는다. PreferNoSchedule taint만으로는 topologySpread(DoNotSchedule)가
+# ai2를 분산 대상으로 계산해 롤링 업데이트 때 그쪽으로 밀려날 수 있다. nodeAffinityPolicy(기본 Honor)로 ai2가 계산에서도 빠진다
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: NotIn
+              values:
+                - k3s-ai2
+
 # 워크로드 HA. 값은 프로파일 파일에서 정한다 (dev: ScheduleAnyway·PDB 없음 / full: DoNotSchedule·PDB)
 topologySpread:
   enabled: true
@@ -60,3 +72,4 @@ topologySpread:
 pdb:
   enabled: false
   minAvailable: 1
+  maxUnavailable: 1  # minAvailable을 null로 둘 때만 쓴다

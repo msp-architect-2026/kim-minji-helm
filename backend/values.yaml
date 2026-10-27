@@ -31,7 +31,8 @@ dnsConfig:
 
 env:
   SPRING_PROFILES_ACTIVE: "prod"
-  AI_SERVER_URL: "http://kim-minji-ai-serving-ai-serving.ai-serving.svc.cluster.local:8000"
+  # ApplicationSet이 ai-serving 차트를 릴리스명 ai-serving으로 배포한다 → Service ai-serving-ai-serving
+  AI_SERVER_URL: "http://ai-serving-ai-serving.ai-serving.svc.cluster.local:8000"
 
 secret:
   name: backend-secret

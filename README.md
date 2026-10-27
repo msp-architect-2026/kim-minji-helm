@@ -79,6 +79,20 @@ kim-minji-helm/
 
 <br>
 
+## ▍프로파일 (dev / full)
+
+| 파일 | 용도 |
+|------|------|
+| `values.yaml` | 공통 기본값. CI(`update-helm.sh`)가 이미지 `tag`를 갱신하는 유일한 파일 |
+| `values-dev.yaml` | 노드 1~2대만 켠 개발 환경: replica 1, ai-serving 메모리 limit 1Gi·HPA max 2, ai2 선호 |
+| `values-full.yaml` | 3노드 To-Be: frontend·backend replica 2, ai-serving ai2 고정 |
+
+- ArgoCD ApplicationSet(kim-minji-infra `argocd/`)이 클러스터 `env` 라벨로 `values-<env>.yaml`을 고릅니다. 라벨이 없으면 dev입니다.
+- 프로파일 파일이 없는 차트는 `values.yaml`만 씁니다.
+- `update-helm.sh`가 `tag:` 문자열을 sed로 치환하므로 프로파일 파일에는 이미지 태그를 넣지 않습니다.
+
+<br>
+
 ## ▍각 Chart 스펙 요약
 
 ### frontend
@@ -86,7 +100,7 @@ kim-minji-helm/
 | 항목 | 값 |
 |------|----|
 | 네임스페이스 | `application` |
-| replicaCount | 1 |
+| replicaCount | dev 1 / full 2 |
 | CPU requests / limits | 100m / 300m |
 | Memory requests / limits | 128Mi / 256Mi |
 | Probe | liveness / readiness TCP 포트 확인 |
@@ -97,7 +111,7 @@ kim-minji-helm/
 | 항목 | 값 |
 |------|----|
 | 네임스페이스 | `application` |
-| replicaCount | 1 |
+| replicaCount | dev 1 / full 2 |
 | CPU requests / limits | 250m / 1000m |
 | Memory requests / limits | 512Mi / 1Gi |
 | Readiness Probe | `/actuator/health`, initialDelay 10s |
@@ -111,11 +125,12 @@ kim-minji-helm/
 | 항목 | 값 |
 |------|----|
 | 네임스페이스 | `ai-serving` |
-| replicaCount | 1 (HPA 최대 4개) |
-| CPU requests / limits | 500m / 1500m |
-| Memory requests / limits | 1Gi / 3Gi |
-| nodeSelector | `kubernetes.io/hostname: k3s-ai2` |
-| HPA | minReplicas 1 / maxReplicas 4 / CPU 70% 기준 |
+| replicaCount | 1 (HPA dev 최대 2개 / full 최대 4개) |
+| CPU requests / limits | dev 250m / 1000m · full 500m / 1500m |
+| Memory requests / limits | dev 512Mi / 1Gi · full 1Gi / 3Gi |
+| 노드 배치 | full: `k3s-ai2` 고정(nodeSelector) · dev: `k3s-ai2` 선호(preferred affinity) |
+| tolerations | `dedicated=ai-serving:PreferNoSchedule` (k3s-ai2 taint) |
+| HPA | minReplicas 1 / maxReplicas dev 2 · full 4 / CPU 70% 기준 |
 | Readiness Probe | `/health`, initialDelay 60s, period 10s, failureThreshold 12 |
 | Liveness Probe | `/health`, initialDelay 120s, period 30s, failureThreshold 6 |
 | ServiceMonitor | `/metrics`, 30s interval |
@@ -127,7 +142,7 @@ kim-minji-helm/
 |------|----|
 | 네임스페이스 | `storage` |
 | image | `mysql:8.0` |
-| nodeSelector | `k3s-w1` 고정 |
+| nodeSelector | 없음 (PV nodeAffinity를 따름) |
 | PVC | 10Gi, ReadWriteOnce (local-path-provisioner) |
 | CPU requests / limits | 200m / 1000m |
 | Memory requests / limits | 512Mi / 1Gi |
@@ -139,7 +154,7 @@ kim-minji-helm/
 |------|----|
 | 네임스페이스 | `storage` |
 | image | `minio/minio:RELEASE.2024-01-16T16-07-38Z` |
-| nodeSelector | `k3s-w1` 고정 |
+| nodeSelector | 없음 (PV nodeAffinity를 따름) |
 | PVC | 10Gi, ReadWriteOnce |
 | CPU requests / limits | 200m / 600m |
 | Memory requests / limits | 256Mi / 512Mi |

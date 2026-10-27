@@ -53,5 +53,5 @@ probes:
     timeoutSeconds: 10
     failureThreshold: 6
 
-nodeSelector:
-  kubernetes.io/hostname: k3s-w1
+# 노드 고정 없음. local-path PV는 PV의 nodeAffinity가 배치 노드를 정한다 (Longhorn 전환 후에는 어느 노드든 가능)
+nodeSelector: {}

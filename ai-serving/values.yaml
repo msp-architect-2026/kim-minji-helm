@@ -55,8 +55,16 @@ hpa:
   maxReplicas: 4
   targetCPUUtilizationPercentage: 70
 
-nodeSelector:
-  kubernetes.io/hostname: k3s-ai2
+# 노드 배치는 프로파일별로 정한다: full은 k3s-ai2 고정(values-full.yaml), dev는 k3s-ai2 선호(values-dev.yaml)
+nodeSelector: {}
+affinity: {}
+
+# k3s-ai2의 taint(dedicated=ai-serving:PreferNoSchedule, RUNBOOK 참고)를 허용한다
+tolerations:
+  - key: dedicated
+    operator: Equal
+    value: ai-serving
+    effect: PreferNoSchedule
 
 imagePullSecrets:
   - name: gitlab-registry-secret

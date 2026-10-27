@@ -31,11 +31,19 @@ resources:
     cpu: 600m
     memory: 512Mi
 
+# 루트 계정은 SealedSecret(minio-secret)으로 관리 (평문 커밋 금지)
 auth:
   existingSecret:
     name: minio-secret
     accessKeyKey: accessKey
     secretKeyKey: secretKey
+
+# kubeseal로 암호화한 값. 키 이름은 auth.existingSecret의 키와 같아야 한다.
+# 생성 방법: README "minio SealedSecret 생성" 참고
+sealedSecret:
+  encryptedData: {}
+    # accessKey: AgB...
+    # secretKey: AgB...
 
 probes:
   liveness:

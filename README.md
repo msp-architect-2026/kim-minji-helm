@@ -74,7 +74,7 @@ kim-minji-helm/
         ├── statefulset.yaml
         ├── service.yaml
         ├── pvc.yaml
-        └── secret.yaml
+        └── secret.yaml         # SealedSecret
 ```
 
 <br>
@@ -159,6 +159,7 @@ kim-minji-helm/
 | CPU requests / limits | 200m / 600m |
 | Memory requests / limits | 256Mi / 512Mi |
 | apiPort / consolePort | 9000 / 9001 |
+| Secret | SealedSecret (`minio-secret`: accessKey, secretKey) |
 | Probe | `/minio/health/live`, `/minio/health/ready` |
 
 <br>
@@ -242,6 +243,31 @@ kubectl -n storage annotate secret mysql-secret sealedsecrets.bitnami.com/manage
 
 적용 순서는 **annotate → 암호문 values 커밋 → ArgoCD sync**입니다. annotate 전에 sync되면 controller가 `already exists and is not managed by SealedSecret` 오류를 내고 기존 Secret을 그대로 둡니다(데이터 손실 없음).  
 전환 후 `mysql-secret`은 SealedSecret이 소유하므로, SealedSecret이나 mysql 앱을 cascade 삭제하면 Secret도 함께 지워져 MySQL Pod 재시작이 실패합니다.
+
+<br>
+
+## ▍minio SealedSecret 생성
+
+`minio/templates/secret.yaml`은 `values.yaml`의 `sealedSecret.encryptedData`(`accessKey`, `secretKey`)로 SealedSecret을 렌더링합니다. 값이 비어 있으면 렌더링이 실패합니다.
+
+MinIO 데이터는 이미 현재 루트 계정으로 초기화되어 있으므로 **클러스터에 있는 `minio-secret` 값 그대로** 암호화합니다. 클러스터 노드에서 실행합니다.
+
+```bash
+NS=storage; NAME=minio-secret
+for k in accessKey secretKey; do
+  v=$(kubectl -n $NS get secret $NAME -o jsonpath="{.data.$k}" | base64 -d)
+  printf '    %s: %s\n' "$k" "$(printf '%s' "$v" | kubeseal --raw --namespace $NS --name $NAME --from-file=/dev/stdin)"
+done
+```
+
+출력된 2줄을 `minio/values.yaml`의 `sealedSecret.encryptedData: {}`에서 `{}`를 지운 뒤 그 아래에 붙여 넣습니다.  
+기존 `minio-secret`은 수동으로 만든 Secret이라 controller가 덮어쓰지 않습니다. 첫 배포 전에 소유권을 넘깁니다.
+
+```bash
+kubectl -n storage annotate secret minio-secret sealedsecrets.bitnami.com/managed=true
+```
+
+적용 순서와 주의사항은 mysql과 같습니다 (annotate → 암호문 커밋 → ArgoCD sync, SealedSecret cascade 삭제 시 Secret도 삭제).
 
 <br>
 

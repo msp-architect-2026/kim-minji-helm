@@ -1,12 +1,17 @@
-{{- if .Values.hpa.enabled }}
+{{- if and .Values.hpa.enabled (not .Values.keda.enabled) }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: {{ include "common.fullname" . }}
 spec:
   scaleTargetRef:
+    {{- if .Values.rollout.enabled }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    {{- else }}
     apiVersion: apps/v1
     kind: Deployment
+    {{- end }}
     name: {{ include "common.fullname" . }}
   minReplicas: {{ .Values.hpa.minReplicas }}
   maxReplicas: {{ .Values.hpa.maxReplicas }}

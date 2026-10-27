@@ -125,12 +125,13 @@ kim-minji-helm/
 | 항목 | 값 |
 |------|----|
 | 네임스페이스 | `ai-serving` |
-| replicaCount | 1 (HPA dev 최대 2개 / full 최대 4개) |
+| 워크로드 | Argo Rollouts `Rollout` (카나리: 50% → Prometheus 분석 → 100%, 실패 시 자동 롤백) |
+| replicaCount | KEDA: dev 1~2 / full 1~3 (Pod당 /predict 2 rps 또는 CPU 70%) |
 | CPU requests / limits | dev 250m / 1000m · full 500m / 1500m |
-| Memory requests / limits | dev 512Mi / 1Gi · full 1Gi / 3Gi |
+| Memory requests / limits | dev 512Mi / 1Gi · full 1Gi / 1.5Gi |
 | 노드 배치 | full: `k3s-ai2` 고정(nodeSelector) · dev: `k3s-ai2` 선호(preferred affinity) |
 | tolerations | `dedicated=ai-serving:PreferNoSchedule` (k3s-ai2 taint) |
-| HPA | minReplicas 1 / maxReplicas dev 2 · full 4 / CPU 70% 기준 |
+| 오토스케일링 | KEDA ScaledObject (Prometheus 요청 수 + CPU). `hpa.enabled`는 KEDA를 끈 경우의 CPU HPA |
 | Readiness Probe | `/health`, initialDelay 60s, period 10s, failureThreshold 12 |
 | Liveness Probe | `/health`, initialDelay 120s, period 30s, failureThreshold 6 |
 | ServiceMonitor | `/metrics`, 30s interval |

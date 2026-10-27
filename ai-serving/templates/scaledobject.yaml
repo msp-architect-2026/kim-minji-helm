@@ -1,0 +1,39 @@
+{{- if .Values.keda.enabled }}
+# KEDA: /predict 요청 수(Prometheus)와 CPU 중 더 큰 쪽 기준으로 Pod 수를 정한다. KEDA가 HPA를 대신 만든다
+{{- $job := include "common.fullname" . }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "common.fullname" . }}
+  labels:
+    {{- include "common.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  scaleTargetRef:
+    {{- if .Values.rollout.enabled }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    {{- else }}
+    apiVersion: apps/v1
+    kind: Deployment
+    {{- end }}
+    name: {{ include "common.fullname" . }}
+  minReplicaCount: {{ .Values.keda.minReplicas }}
+  maxReplicaCount: {{ .Values.keda.maxReplicas }}
+  pollingInterval: {{ .Values.keda.pollingInterval }}
+  cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
+  triggers:
+    # Pod당 초당 /predict 요청 수가 기준을 넘으면 늘린다 (추론 지연이 CPU보다 먼저 반응)
+    - type: prometheus
+      metadata:
+        serverAddress: {{ .Values.keda.prometheusAddress }}
+        query: sum(rate(http_requests_total{job="{{ $job }}",handler="/predict"}[2m]))
+        threshold: {{ .Values.keda.requestsPerSecondPerPod | quote }}
+        # Prometheus가 응답하지 않으면 이 트리거는 0으로 보고 CPU 트리거만 쓴다
+        ignoreNullValues: "true"
+    - type: cpu
+      metricType: Utilization
+      metadata:
+        value: {{ .Values.keda.cpuUtilization | quote }}
+{{- end }}

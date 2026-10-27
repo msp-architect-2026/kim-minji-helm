@@ -8,7 +8,7 @@ resources:
     cpu: 1000m
     memory: 1Gi
 
-hpa:
+keda:
   minReplicas: 1
   maxReplicas: 2
 

@@ -1,0 +1,44 @@
+{{- if .Values.rollout.enabled }}
+# 카나리 판정: 새 버전 Pod(rollouts_pod_template_hash = 카나리 해시)만 본다.
+#  - /predict 5xx 비율이 기준 미만 (요청이 없으면 0으로 본다 — 의미 있는 판정에는 배포 중 실제 트래픽이 필요)
+#  - 카나리 Pod가 Prometheus에 수집되고 있음
+# {{`{{args.canary-hash}}`}}는 Argo Rollouts가 채우는 값이다 (Helm이 해석하지 않도록 이스케이프)
+{{- $job := include "common.fullname" . }}
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: {{ include "common.fullname" . }}-canary
+  labels:
+    {{- include "common.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  args:
+    - name: canary-hash
+  metrics:
+    - name: canary-predict-error-ratio
+      # 카나리 Pod 시계열이 [2m] rate를 낼 만큼 쌓인 뒤 측정한다
+      initialDelay: {{ .Values.rollout.analysis.initialDelay }}
+      interval: {{ .Values.rollout.analysis.interval }}
+      count: {{ .Values.rollout.analysis.count }}
+      failureLimit: {{ .Values.rollout.analysis.failureLimit }}
+      successCondition: result[0] < {{ .Values.rollout.analysis.maxErrorRatio }}
+      provider:
+        prometheus:
+          address: {{ .Values.keda.prometheusAddress }}
+          query: |
+            (
+              sum(rate(http_requests_total{job="{{ $job }}",handler="/predict",status="5xx",rollouts_pod_template_hash="{{`{{args.canary-hash}}`}}"}[2m]))
+                / (sum(rate(http_requests_total{job="{{ $job }}",handler="/predict",rollouts_pod_template_hash="{{`{{args.canary-hash}}`}}"}[2m])) > 0)
+            ) or vector(0)
+    - name: canary-up
+      initialDelay: {{ .Values.rollout.analysis.initialDelay }}
+      interval: {{ .Values.rollout.analysis.interval }}
+      count: {{ .Values.rollout.analysis.count }}
+      failureLimit: {{ .Values.rollout.analysis.failureLimit }}
+      successCondition: result[0] >= 1
+      provider:
+        prometheus:
+          address: {{ .Values.keda.prometheusAddress }}
+          query: sum(up{job="{{ $job }}",rollouts_pod_template_hash="{{`{{args.canary-hash}}`}}"}) or vector(0)
+{{- end }}

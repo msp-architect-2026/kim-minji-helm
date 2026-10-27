@@ -6,6 +6,9 @@ metadata:
   labels:
     release: monitoring
 spec:
+  # Argo Rollouts가 붙이는 Pod 해시를 메트릭 레이블(rollouts_pod_template_hash)로 남겨 카나리 Pod만 따로 분석한다
+  podTargetLabels:
+    - rollouts-pod-template-hash
   selector:
     matchLabels:
       app.kubernetes.io/name: ai-serving

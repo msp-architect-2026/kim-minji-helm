@@ -1,14 +1,51 @@
+{{- $autoscaled := or .Values.keda.enabled .Values.hpa.enabled }}
+{{- if .Values.rollout.enabled }}
+# Argo Rollouts 카나리: 새 이미지를 일부 Pod에 먼저 띄우고 AnalysisTemplate(Prometheus)로 판정, 실패하면 자동 롤백
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+{{- else }}
 apiVersion: apps/v1
 kind: Deployment
+{{- end }}
 metadata:
   name: {{ include "common.fullname" . }}
   labels:
     {{- include "common.labels" . | nindent 4 }}
+  {{- if .Values.rollout.enabled }}
+  annotations:
+    # Argo Rollouts CRD가 설치되기 전 첫 sync의 dry-run 실패를 건너뛴다 (retry로 수렴)
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  {{- end }}
 spec:
-  {{- if not .Values.hpa.enabled }}
+  {{- if not $autoscaled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
-  # HPA를 쓸 때는 replicas를 비워 둔다 (ArgoCD selfHeal이 HPA가 늘린 Pod 수를 되돌리지 않게)
+  # 오토스케일링(KEDA·HPA)을 쓸 때는 replicas를 비워 둔다 (ArgoCD selfHeal이 늘어난 Pod 수를 되돌리지 않게)
+  {{- if .Values.rollout.enabled }}
+  # 카나리 Pod가 이 시간 안에 Ready가 안 되면(예: OOMKilled) 자동 중단·롤백한다 (분석은 setWeight 완료 후에 시작되므로)
+  progressDeadlineSeconds: {{ .Values.rollout.progressDeadlineSeconds }}
+  progressDeadlineAbort: true
+  strategy:
+    canary:
+      {{- with .Values.rollout.maxSurge }}
+      maxSurge: {{ . }}
+      {{- end }}
+      maxUnavailable: 0
+      steps:
+        {{- range .Values.rollout.steps }}
+        {{- if hasKey . "analysis" }}
+        - analysis:
+            templates:
+              - templateName: {{ include "common.fullname" $ }}-canary
+            args:
+              - name: canary-hash
+                valueFrom:
+                  podTemplateHashValue: Latest
+        {{- else }}
+        - {{ toYaml . | nindent 10 | trim }}
+        {{- end }}
+        {{- end }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "common.selectorLabels" . | nindent 6 }}

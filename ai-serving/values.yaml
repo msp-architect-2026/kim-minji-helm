@@ -49,11 +49,42 @@ probes:
     timeoutSeconds: 10
     failureThreshold: 6
 
-hpa:
+# 오토스케일링은 KEDA(요청 수 + CPU). hpa는 KEDA를 끈 경우의 CPU 기준 HPA
+keda:
   enabled: true
   minReplicas: 1
-  maxReplicas: 4
+  maxReplicas: 3
+  prometheusAddress: http://monitoring-kube-prometheus-prometheus.monitoring.svc:9090
+  # Pod 하나가 감당할 초당 /predict 요청 수. 부하 테스트로 조정 (RUNBOOK C21)
+  requestsPerSecondPerPod: 2
+  cpuUtilization: 70
+  pollingInterval: 15
+  # 축소 안정화 시간(초). (KEDA cooldownPeriod는 0개로 줄일 때만 쓰여 여기서는 의미가 없다)
+  scaleDownStabilizationSeconds: 300
+
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
   targetCPUUtilizationPercentage: 70
+
+# Argo Rollouts 카나리 (프로파일 공통). 레플리카 기반: setWeight는 전체 Pod 중 새 버전 비율
+rollout:
+  enabled: true
+  # 카나리 Pod를 기존 Pod에 더해 띄운다 (가용 Pod 수가 줄지 않게)
+  maxSurge: 1
+  # 카나리 Pod가 이 시간 안에 Ready가 안 되면 자동 중단 (모델 로딩 60~120초 고려)
+  progressDeadlineSeconds: 600
+  steps:
+    - setWeight: 50
+    - analysis: {}
+    - setWeight: 100
+  analysis:
+    initialDelay: 1m
+    interval: 1m
+    count: 3
+    failureLimit: 1
+    maxErrorRatio: 0.05
 
 # 노드 배치는 프로파일별로 정한다: full은 k3s-ai2 고정(values-full.yaml), dev는 k3s-ai2 선호(values-dev.yaml)
 nodeSelector: {}

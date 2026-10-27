@@ -1,0 +1,8 @@
+# scripts/validate.sh 전용 더미 값. 배포(ArgoCD)에는 쓰지 않는다.
+# 실제 암호문은 values.yaml의 sealedSecret.encryptedData에 넣는다 (README 참고).
+sealedSecret:
+  encryptedData:
+    MYSQL_ROOT_PASSWORD: AgDUMMY-validate-only
+    MYSQL_DATABASE: AgDUMMY-validate-only
+    MYSQL_USER: AgDUMMY-validate-only
+    MYSQL_PASSWORD: AgDUMMY-validate-only

@@ -6,7 +6,7 @@ replicaCount: 1
 image:
   repository: gitlab.local:5050/root/kim-minji-ai
   tag: "274b35d2"
-  pullPolicy: Always
+  pullPolicy: IfNotPresent  # 태그가 커밋 SHA라 바뀌지 않으므로 매번 받지 않는다
 
 service:
   type: ClusterIP

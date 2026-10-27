@@ -1,0 +1,18 @@
+{{- if .Values.pdb.enabled }}
+# full 프로파일: drain·노드 장애 때 최소 가용 Pod 수를 지킨다
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "frontend.fullname" . }}
+  labels:
+    {{- include "frontend.labels" . | nindent 4 }}
+spec:
+  {{- if not (kindIs "invalid" .Values.pdb.minAvailable) }}
+  minAvailable: {{ .Values.pdb.minAvailable }}
+  {{- else }}
+  maxUnavailable: {{ .Values.pdb.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "frontend.selectorLabels" . | nindent 6 }}
+{{- end }}

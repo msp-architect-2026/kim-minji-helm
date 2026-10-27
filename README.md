@@ -84,8 +84,8 @@ kim-minji-helm/
 | 파일 | 용도 |
 |------|------|
 | `values.yaml` | 공통 기본값. CI(`update-helm.sh`)가 이미지 `tag`를 갱신하는 유일한 파일 |
-| `values-dev.yaml` | 노드 1~2대만 켠 개발 환경: replica 1, ai-serving 메모리 limit 1Gi·HPA max 2, ai2 선호 |
-| `values-full.yaml` | 3노드 To-Be: frontend·backend replica 2, ai-serving ai2 고정 |
+| `values-dev.yaml` | 노드 1~2대만 켠 개발 환경: replica 1·노드 분산 ScheduleAnyway·PDB 없음, ai-serving 메모리 limit 1Gi·HPA max 2, ai2 선호 |
+| `values-full.yaml` | 3노드 To-Be: frontend·backend replica 2·PDB·노드 분산(DoNotSchedule), ai-serving ai2 고정·PDB, mysql replica |
 
 - ArgoCD ApplicationSet(kim-minji-infra `argocd/`)이 클러스터 `env` 라벨로 `values-<env>.yaml`을 고릅니다. 라벨이 없으면 dev입니다.
 - 프로파일 파일이 없는 차트는 `values.yaml`만 씁니다.

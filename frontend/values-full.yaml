@@ -1,3 +1,7 @@
-# full 프로파일: 3노드 모두 켠 To-Be 구성
-# PDB·topologySpread는 워크로드 HA 항목에서 추가한다
+# full 프로파일: replica 2를 서로 다른 노드에, drain 때도 1개는 유지
 replicaCount: 2
+topologySpread:
+  whenUnsatisfiable: DoNotSchedule
+pdb:
+  enabled: true
+  minAvailable: 1

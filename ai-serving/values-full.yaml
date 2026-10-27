@@ -2,3 +2,5 @@
 # resources·HPA(1~4)는 values.yaml 기본값을 그대로 쓴다. maxReplicas 4는 k3s-ai2 한 대의 용량이 상한이다.
 nodeSelector:
   kubernetes.io/hostname: k3s-ai2
+pdb:
+  enabled: true

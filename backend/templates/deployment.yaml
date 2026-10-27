@@ -14,6 +14,22 @@ spec:
       labels:
         {{- include "common.selectorLabels" . | nindent 8 }}
     spec:
+      {{- if .Values.topologySpread.enabled }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      # 노드 분산. Honor: cordon·NotReady 노드(NoSchedule/NoExecute taint)는 계산에서 뺀다.
+      # ai2의 PreferNoSchedule taint는 이 계산에서 빠지지 않으므로 ai2 제외는 아래 nodeAffinity가 맡는다
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: {{ .Values.topologySpread.whenUnsatisfiable }}
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              {{- include "common.selectorLabels" . | nindent 14 }}
+      {{- end }}
       {{- if .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- range .Values.imagePullSecrets }}

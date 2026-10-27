@@ -66,7 +66,7 @@ kim-minji-helm/
 │       ├── statefulset.yaml
 │       ├── service.yaml
 │       ├── pvc.yaml
-│       └── secret.yaml
+│       └── secret.yaml         # SealedSecret
 └── minio/
     ├── Chart.yaml
     ├── values.yaml
@@ -148,7 +148,7 @@ kim-minji-helm/
 | binlog/GTID | 프로파일 공통 ON, binlog 3일 보관 |
 | CPU requests / limits | 200m / 1000m |
 | Memory requests / limits | 512Mi / 1Gi |
-| Secret | `mysql-secret` |
+| Secret | SealedSecret (`mysql-secret`) |
 
 ### minio
 

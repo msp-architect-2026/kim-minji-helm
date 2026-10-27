@@ -166,35 +166,40 @@ kim-minji-helm/
 
 <br>
 
-## ▍이미지 태그 자동 업데이트 흐름
+## ▍이미지 태그 반영 흐름 (MR)
 
 ```
-GitLab CI (빌드 완료)
-└─ update-helm.sh 실행
-   └─ git clone kim-minji-helm
-      └─ sed로 values.yaml tag 값 → CI_COMMIT_SHORT_SHA 교체
-         └─ git commit & push
-            └─ ArgoCD 3분 내 감지
-               └─ Helm chart 렌더링 → k3s apply → Synced + Healthy
+GitLab CI (main, 빌드·스캔 완료)
+└─ update-helm.sh
+   └─ kim-minji-helm 클론 → ci/<chart>-<sha> 브랜치
+      └─ <chart>/values.yaml의 image.tag 줄만 CI_COMMIT_SHORT_SHA로 교체
+         └─ 브랜치 push + GitLab MR 생성 (target: main)
+            └─ 사람이 MR 머지 = 배포 승인
+               └─ ArgoCD가 main 변경 감지 → Synced + Healthy
 ```
 
-SHA 태그로 정확한 롤백 추적이 가능하며, latest 태그도 함께 push합니다.  
-`HELM_REPO_TOKEN`을 각 서비스 레포 CI/CD Variables에 등록하여 이 레포에 push 권한을 부여합니다.
+이미지는 커밋 SHA 태그만 push합니다(`latest` 없음). 롤백은 MR revert 또는 이전 SHA로 태그를 되돌리는 MR입니다.  
+`HELM_REPO_TOKEN`(각 서비스 레포 CI/CD 변수)은 kim-minji-helm에 push하고 MR을 만들 수 있어야 합니다 (GitLab 토큰 범위 `api`, `write_repository`).  
+`ci/*` 브랜치는 자동으로 지우지 않습니다. 필요하면 GitLab에서 정리합니다.
 
 <br>
 
 ## ▍ArgoCD syncPolicy
 
+kim-minji-infra의 `apps` ApplicationSet이 차트마다 Application을 만듭니다.
+
 ```yaml
-# frontend, backend, ai-serving, mysql, minio 공통
 syncPolicy:
-  automated: {}           # auto-sync만 활성화
+  automated:
+    prune: true      # Git에서 지운 리소스는 클러스터에서도 삭제
+    selfHeal: true   # kubectl 수동 변경은 Git 상태로 되돌림
   syncOptions:
     - CreateNamespace=true
+  retry: { limit: 5, backoff: { duration: 10s, factor: 2, maxDuration: 3m } }
 ```
 
-Git push → 자동 배포는 되지만, 수동 변경은 자동 복구하지 않습니다.  
-인프라 리소스(`prune: true`, `selfHeal: true`)와 달리 앱 리소스는 더 유연하게 운영합니다.
+- 변경은 Git으로만 합니다. 유지보수 중 자동 sync를 잠시 끄는 방법은 kim-minji-infra RUNBOOK 4.12를 따릅니다.
+- HPA를 쓰는 Deployment(ai-serving)는 `replicas`를 지정하지 않아 HPA와 selfHeal이 충돌하지 않습니다.
 
 <br>
 

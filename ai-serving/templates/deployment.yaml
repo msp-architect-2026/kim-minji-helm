@@ -5,7 +5,10 @@ metadata:
   labels:
     {{- include "common.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.hpa.enabled }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  # HPA를 쓸 때는 replicas를 비워 둔다 (ArgoCD selfHeal이 HPA가 늘린 Pod 수를 되돌리지 않게)
   selector:
     matchLabels:
       {{- include "common.selectorLabels" . | nindent 6 }}

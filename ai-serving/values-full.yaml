@@ -1,5 +1,5 @@
 # full 프로파일: 3노드 모두 켠 To-Be 구성
-# k3s-ai2(7GB 가정) 한 대에 최대 3개 × limit 1.5Gi = 4.5Gi. 1.5Gi로 모델이 뜨는지는 클러스터에서 확인 (RUNBOOK C2)
+# k3s-ai2(7GB 가정) 한 대에 최대 3개 × limit 1.5Gi = 4.5Gi (카나리 중 +1개면 6Gi). 1.5Gi로 모델이 뜨는지는 클러스터에서 먼저 확인 (RUNBOOK C2)
 resources:
   requests:
     cpu: 500m

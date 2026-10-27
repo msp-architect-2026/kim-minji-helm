@@ -22,6 +22,9 @@ spec:
   {{- end }}
   # 오토스케일링(KEDA·HPA)을 쓸 때는 replicas를 비워 둔다 (ArgoCD selfHeal이 늘어난 Pod 수를 되돌리지 않게)
   {{- if .Values.rollout.enabled }}
+  # 카나리 Pod가 이 시간 안에 Ready가 안 되면(예: OOMKilled) 자동 중단·롤백한다 (분석은 setWeight 완료 후에 시작되므로)
+  progressDeadlineSeconds: {{ .Values.rollout.progressDeadlineSeconds }}
+  progressDeadlineAbort: true
   strategy:
     canary:
       {{- with .Values.rollout.maxSurge }}
@@ -34,6 +37,10 @@ spec:
         - analysis:
             templates:
               - templateName: {{ include "common.fullname" $ }}-canary
+            args:
+              - name: canary-hash
+                valueFrom:
+                  podTemplateHashValue: Latest
         {{- else }}
         - {{ toYaml . | nindent 10 | trim }}
         {{- end }}

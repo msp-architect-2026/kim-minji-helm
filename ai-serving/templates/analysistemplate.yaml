@@ -1,6 +1,8 @@
 {{- if .Values.rollout.enabled }}
-# 카나리 판정: 분석 동안 /predict 5xx 비율이 기준 미만이고 서비스가 수집되고 있으면 성공.
-# 트래픽이 없을 때는 비율을 0으로 본다 (분석이 NaN으로 실패하지 않게)
+# 카나리 판정: 새 버전 Pod(rollouts_pod_template_hash = 카나리 해시)만 본다.
+#  - /predict 5xx 비율이 기준 미만 (요청이 없으면 0으로 본다 — 의미 있는 판정에는 배포 중 실제 트래픽이 필요)
+#  - 카나리 Pod가 Prometheus에 수집되고 있음
+# {{`{{args.canary-hash}}`}}는 Argo Rollouts가 채우는 값이다 (Helm이 해석하지 않도록 이스케이프)
 {{- $job := include "common.fullname" . }}
 apiVersion: argoproj.io/v1alpha1
 kind: AnalysisTemplate
@@ -11,8 +13,12 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
+  args:
+    - name: canary-hash
   metrics:
-    - name: predict-error-ratio
+    - name: canary-predict-error-ratio
+      # 카나리 Pod 시계열이 [2m] rate를 낼 만큼 쌓인 뒤 측정한다
+      initialDelay: {{ .Values.rollout.analysis.initialDelay }}
       interval: {{ .Values.rollout.analysis.interval }}
       count: {{ .Values.rollout.analysis.count }}
       failureLimit: {{ .Values.rollout.analysis.failureLimit }}
@@ -22,17 +28,17 @@ spec:
           address: {{ .Values.keda.prometheusAddress }}
           query: |
             (
-              sum(rate(http_requests_total{job="{{ $job }}",handler="/predict",status="5xx"}[2m]))
-                / (sum(rate(http_requests_total{job="{{ $job }}",handler="/predict"}[2m])) > 0)
+              sum(rate(http_requests_total{job="{{ $job }}",handler="/predict",status="5xx",rollouts_pod_template_hash="{{`{{args.canary-hash}}`}}"}[2m]))
+                / (sum(rate(http_requests_total{job="{{ $job }}",handler="/predict",rollouts_pod_template_hash="{{`{{args.canary-hash}}`}}"}[2m])) > 0)
             ) or vector(0)
-    - name: targets-up
+    - name: canary-up
+      initialDelay: {{ .Values.rollout.analysis.initialDelay }}
       interval: {{ .Values.rollout.analysis.interval }}
       count: {{ .Values.rollout.analysis.count }}
       failureLimit: {{ .Values.rollout.analysis.failureLimit }}
-      # 카나리 Pod를 포함해 수집 대상이 하나라도 살아 있어야 한다
       successCondition: result[0] >= 1
       provider:
         prometheus:
           address: {{ .Values.keda.prometheusAddress }}
-          query: sum(up{job="{{ $job }}"}) or vector(0)
+          query: sum(up{job="{{ $job }}",rollouts_pod_template_hash="{{`{{args.canary-hash}}`}}"}) or vector(0)
 {{- end }}

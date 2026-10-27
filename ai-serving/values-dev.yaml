@@ -11,6 +11,9 @@ resources:
 keda:
   minReplicas: 1
   maxReplicas: 2
+# KEDA를 끈 경우의 CPU HPA도 같은 상한
+hpa:
+  maxReplicas: 2
 
 # k3s-ai2가 켜져 있으면 그쪽에, 꺼져 있으면 다른 노드에 뜬다
 affinity:

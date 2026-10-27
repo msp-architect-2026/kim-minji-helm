@@ -5,3 +5,5 @@ topologySpread:
 pdb:
   enabled: true
   minAvailable: 1
+tracing:
+  enabled: true

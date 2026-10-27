@@ -83,13 +83,33 @@ spec:
               containerPort: 8000
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          {{- if .Values.env }}
           env:
             {{- range $key, $value := .Values.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
-          {{- end }}
+            # OpenTelemetry (이미지의 opentelemetry-instrument가 읽는다). 끄면 계측 없이 동작
+            {{- if .Values.tracing.enabled }}
+            - name: OTEL_SERVICE_NAME
+              value: ai-serving
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.tracing.endpoint }}
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: http/protobuf
+            - name: OTEL_TRACES_SAMPLER
+              value: parentbased_traceidratio
+            - name: OTEL_TRACES_SAMPLER_ARG
+              value: {{ .Values.tracing.samplerRatio | quote }}
+            - name: OTEL_METRICS_EXPORTER
+              value: none
+            - name: OTEL_LOGS_EXPORTER
+              value: none
+            - name: OTEL_PYTHON_LOG_CORRELATION
+              value: "true"
+            {{- else }}
+            - name: OTEL_SDK_DISABLED
+              value: "true"
+            {{- end }}
           {{- if .Values.probes.enabled }}
           readinessProbe:
             httpGet:

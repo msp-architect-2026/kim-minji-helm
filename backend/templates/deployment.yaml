@@ -42,6 +42,26 @@ spec:
       dnsConfig:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- if .Values.tracing.enabled }}
+      # OTel Java agent를 이미지 변경 없이 주입한다: initContainer가 jar를 공유 볼륨에 복사 → JAVA_TOOL_OPTIONS로 로드
+      initContainers:
+        - name: otel-agent
+          image: {{ .Values.tracing.agentImage }}
+          command: ["cp", "/javaagent.jar", "/otel/javaagent.jar"]
+          volumeMounts:
+            - name: otel-agent
+              mountPath: /otel
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+      volumes:
+        - name: otel-agent
+          emptyDir: {}
+      {{- end }}
       containers:
         - name: backend
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -54,6 +74,29 @@ spec:
                 name: {{ include "common.fullname" . }}-config
             - secretRef:
                 name: {{ .Values.secret.name }}
+          {{- if .Values.tracing.enabled }}
+          env:
+            - name: JAVA_TOOL_OPTIONS
+              value: -javaagent:/otel/javaagent.jar
+            - name: OTEL_SERVICE_NAME
+              value: backend
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.tracing.endpoint }}
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: http/protobuf
+            - name: OTEL_TRACES_SAMPLER
+              value: parentbased_traceidratio
+            - name: OTEL_TRACES_SAMPLER_ARG
+              value: {{ .Values.tracing.samplerRatio | quote }}
+            # 메트릭은 기존 Micrometer(/actuator/prometheus), 로그는 Loki가 맡는다
+            - name: OTEL_METRICS_EXPORTER
+              value: none
+            - name: OTEL_LOGS_EXPORTER
+              value: none
+          volumeMounts:
+            - name: otel-agent
+              mountPath: /otel
+          {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
 

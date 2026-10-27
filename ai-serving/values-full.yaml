@@ -16,3 +16,5 @@ nodeSelector:
   kubernetes.io/hostname: k3s-ai2
 pdb:
   enabled: true
+tracing:
+  enabled: true

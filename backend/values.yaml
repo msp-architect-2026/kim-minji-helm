@@ -73,3 +73,11 @@ pdb:
   enabled: false
   minAvailable: 1
   maxUnavailable: 1  # minAvailable을 null로 둘 때만 쓴다
+
+# 트레이싱 (OTel → Collector → Tempo). full에서만 켠다 (values-full.yaml)
+tracing:
+  enabled: false
+  endpoint: http://otel-collector.monitoring.svc:4318
+  samplerRatio: "1.0"
+  # OTel Java agent (initContainer가 /javaagent.jar를 복사)
+  agentImage: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-java:2.32.0

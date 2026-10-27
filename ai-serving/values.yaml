@@ -105,3 +105,9 @@ pdb:
   enabled: false
   minAvailable: null
   maxUnavailable: 1
+
+# 트레이싱 (OTel → Collector → Tempo). full에서만 켠다 (values-full.yaml)
+tracing:
+  enabled: false
+  endpoint: http://otel-collector.monitoring.svc:4318
+  samplerRatio: "1.0"

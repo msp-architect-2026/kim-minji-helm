@@ -6,7 +6,7 @@ replicaCount: 1
 image:
   repository: gitlab.local:5050/root/kim-minji-backend
   tag: "f6eb0c30"
-  pullPolicy: Always
+  pullPolicy: IfNotPresent  # 태그가 커밋 SHA라 바뀌지 않으므로 매번 받지 않는다
 
 imagePullSecrets:
   - name: gitlab-registry-secret

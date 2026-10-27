@@ -14,7 +14,8 @@ service:
 
 persistence:
   enabled: true
-  storageClassName: ""
+  # Longhorn: 노드가 꺼져도 다른 노드에서 볼륨을 붙일 수 있다 (local-path → Longhorn 이전 절차는 infra RUNBOOK)
+  storageClassName: longhorn
   accessModes: ["ReadWriteOnce"]
   size: 10Gi
 
@@ -34,6 +35,8 @@ secret:
     database: MYSQL_DATABASE
     username: MYSQL_USER
     password: MYSQL_PASSWORD
+    # replication.enabled(full)일 때만 필요
+    replicationPassword: MYSQL_REPLICATION_PASSWORD
 
 # kubeseal로 암호화한 값. 키 이름은 secret.keys와 같아야 한다.
 # 생성 방법: README "mysql SealedSecret 생성" 참고
@@ -43,6 +46,7 @@ sealedSecret:
     # MYSQL_DATABASE: AgB...
     # MYSQL_USER: AgB...
     # MYSQL_PASSWORD: AgB...
+    # MYSQL_REPLICATION_PASSWORD: AgB...   # full(replication)에서 필요
 
 config:
   name: mysql-config
@@ -63,6 +67,30 @@ probes:
 
 initSchema:
   enabled: false
+
+# mysqld 공통 설정. binlog·GTID는 프로파일과 무관하게 항상 켠다
+# (dev↔full 전환 때 primary 설정이 바뀌어 재시작되지 않게 하고, full에서 replica가 바로 따라붙을 수 있게)
+mysqld:
+  binlogExpireSeconds: 259200  # 3일
+
+# full 프로파일: GTID 비동기 replica 1대 (읽기 전용 대기 서버, failover는 수동 — infra RUNBOOK)
+replication:
+  enabled: false
+  user: repl
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  # 초기 동기화·복제 설정 Job(PostSync hook)이 쓰는 클라이언트 이미지
+  setupImage: mysql:8.0
+
+# 수동 failover 상태 (infra RUNBOOK 4.9). true면 primary Service가 replica를 가리키고 복제 설정 Job을 만들지 않는다.
+# Git으로 바꿔야 ArgoCD sync가 되돌리지 않는다
+failover:
+  promoted: false
 
 # 노드 고정 없음. local-path PV는 PV의 nodeAffinity가 배치 노드를 정한다 (Longhorn 전환 후에는 어느 노드든 가능)
 nodeSelector: {}  

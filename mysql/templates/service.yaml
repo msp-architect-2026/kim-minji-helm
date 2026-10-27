@@ -12,4 +12,9 @@ spec:
       protocol: TCP
       name: mysql
   selector:
+    {{- if .Values.failover.promoted }}
+    # 수동 failover(infra RUNBOOK 4.9): backend가 쓰는 Service를 승격된 replica로 돌린다
+    {{- include "mysql.replicaSelectorLabels" . | nindent 4 }}
+    {{- else }}
     {{- include "common.selectorLabels" . | nindent 4 }}
+    {{- end }}

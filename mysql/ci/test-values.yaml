@@ -6,3 +6,4 @@ sealedSecret:
     MYSQL_DATABASE: AgDUMMY-validate-only
     MYSQL_USER: AgDUMMY-validate-only
     MYSQL_PASSWORD: AgDUMMY-validate-only
+    MYSQL_REPLICATION_PASSWORD: AgDUMMY-validate-only

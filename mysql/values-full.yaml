@@ -1,0 +1,3 @@
+# full 프로파일: primary + GTID 비동기 replica (서로 다른 노드)
+replication:
+  enabled: true

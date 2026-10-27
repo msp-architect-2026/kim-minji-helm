@@ -104,11 +104,19 @@ spec:
               value: none
             - name: OTEL_LOGS_EXPORTER
               value: none
-            - name: OTEL_PYTHON_LOG_CORRELATION
-              value: "true"
+            # 프로브·메트릭 수집 요청은 trace로 남기지 않는다
+            - name: OTEL_PYTHON_FASTAPI_EXCLUDED_URLS
+              value: "health,metrics"
             {{- else }}
+            # 계측 끔. exporter도 none으로 두어 기동 시 exporter 탐색 오류 로그가 나지 않게 한다
             - name: OTEL_SDK_DISABLED
               value: "true"
+            - name: OTEL_TRACES_EXPORTER
+              value: none
+            - name: OTEL_METRICS_EXPORTER
+              value: none
+            - name: OTEL_LOGS_EXPORTER
+              value: none
             {{- end }}
           {{- if .Values.probes.enabled }}
           readinessProbe:

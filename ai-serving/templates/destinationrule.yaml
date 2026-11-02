@@ -1,0 +1,20 @@
+{{- if .Values.mesh.enabled }}
+# Pod 단위 장애 격리: 연속 5xx를 낸 Pod를 호출 sidecar의 부하 분산 대상에서 잠시 뺀다.
+# Readiness가 정상이라 Service 엔드포인트에는 남아 있는 Pod(/predict만 실패)도 여기서 걸러진다
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: {{ include "common.fullname" . }}
+  labels:
+    {{- include "common.labels" . | nindent 4 }}
+  annotations:
+    # Istio CRD(kim-minji-infra istio)가 아직 없으면 dry-run 실패를 건너뛴다 (retry로 수렴)
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  host: {{ include "common.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      {{- toYaml .Values.mesh.connectionPool | nindent 6 }}
+    outlierDetection:
+      {{- toYaml .Values.mesh.outlierDetection | nindent 6 }}
+{{- end }}

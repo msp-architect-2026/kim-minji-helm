@@ -89,6 +89,7 @@ kim-minji-helm/
 
 - ArgoCD ApplicationSet(kim-minji-infra `argocd/`)이 클러스터 `env` 라벨로 `values-<env>.yaml`을 고릅니다. 라벨이 없으면 dev입니다.
 - 프로파일 파일이 없는 차트는 `values.yaml`만 씁니다.
+- `values-exp-<라벨>.yaml`(backend, ai-serving): Istio Outlier Detection 실험 오버레이입니다. 클러스터 `experiment` 라벨(`baseline` | `cb` | `mesh` | `mesh-retry`)이 있을 때만 프로파일 위에 얹힙니다 (kim-minji-infra RUNBOOK 4.15).
 - `update-helm.sh`가 `tag:` 문자열을 sed로 치환하므로 프로파일 파일에는 이미지 태그를 넣지 않습니다.
 
 <br>
@@ -136,6 +137,7 @@ kim-minji-helm/
 | Liveness Probe | `/health`, initialDelay 120s, period 30s, failureThreshold 6 |
 | ServiceMonitor | `/metrics`, 30s interval |
 | dnsConfig | `ndots: 2` (FQDN 서비스 주소를 search domain 확장 없이 조회) |
+| Istio (`mesh.enabled`, 실험 전용) | sidecar 주입 + DestinationRule(연속 5xx 3회 → 30초 격리, 최대 50%, 연결 풀) + VirtualService(timeout 5s, 재시도 기본 0). 기본 off |
 
 ### mysql
 

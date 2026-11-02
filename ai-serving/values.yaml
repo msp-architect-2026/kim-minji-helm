@@ -129,6 +129,10 @@ mesh:
     maxEjectionPercent: 50
     # 0: 패닉 모드(정상 Pod 비율이 기준보다 낮으면 격리를 무시하고 전체에 분산)를 끈다
     minHealthPercent: 0
+    # timeout·연결 reset 같은 sidecar 자체 오류(local origin)는 5xx 연속 횟수에 섞지 않는다. 섞이면 과부하로 느려진
+    # 정상 Pod가 격리되고, 최대 50% 제한 때문에 트래픽이 전부 장애 Pod로 갈 수 있다. local origin 기준 격리는 사실상 끈다
+    splitExternalLocalOriginErrors: true
+    consecutiveLocalOriginFailures: 1000
   # 호출하는 sidecar 하나가 ai-serving 전체(Pod 합계)로 여는 연결·대기 요청 상한. 넘으면 sidecar가 바로 503(UO)을 반환한다.
   # 단일 워커 FastAPI라 Pod당 동시 처리량이 작다. 부하 테스트로 조정 (RUNBOOK C25)
   connectionPool:
@@ -143,5 +147,7 @@ mesh:
   retries:
     # 0: 재시도 없음. retries를 생략하면 Istio 기본 정책(2회, 503 등)이 적용돼 Outlier Detection 효과와 섞이므로 명시한다
     attempts: 0
-    perTryTimeout: 2s
-    retryOn: 5xx,reset,connect-failure
+    # timeout과 같게 둔다. 더 짧으면 느린 정상 응답이 잘려 재시도되고(실험 D), 그 504가 정상 Pod 오류로 잡힌다
+    perTryTimeout: 5s
+    # 503(장애 Pod 응답)과 연결 실패만 재시도한다. 5xx·gateway-error를 넣으면 timeout까지 재시도 대상이 된다
+    retryOn: 503,connect-failure

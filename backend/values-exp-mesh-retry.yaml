@@ -1,0 +1,7 @@
+# 실험 D: C와 같다. 재시도는 ai-serving VirtualService에서 켠다 (RUNBOOK 4.15)
+# Circuit Breaker 무력화: 최근 1000건이 전부 실패해야 열린다 (COUNT_BASED는 최소 호출 수가 창 크기로 잘리므로 창 자체를 키운다).
+# 환경변수로 resilience4j.circuitbreaker.instances.aiServing.*를 쓰면 키가 소문자(aiserving)로 바뀌어 적용되지 않으므로 JSON으로 넣는다
+env:
+  SPRING_APPLICATION_JSON: '{"resilience4j":{"circuitbreaker":{"instances":{"aiServing":{"sliding-window-size":1000,"minimum-number-of-calls":1000,"failure-rate-threshold":100}}}}}'
+mesh:
+  enabled: true

@@ -82,3 +82,8 @@ tracing:
   samplerRatio: "1.0"
   # OTel Java agent (initContainer가 /javaagent.jar를 복사)
   agentImage: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-java:2.32.0
+
+# Istio sidecar 주입 (ai-serving Outlier Detection 실험, RUNBOOK 4.15). 실험 오버레이(values-exp-mesh*.yaml)에서만 켠다.
+# ai-serving으로 가는 요청의 Pod 단위 격리는 backend 쪽 sidecar가 한다
+mesh:
+  enabled: false

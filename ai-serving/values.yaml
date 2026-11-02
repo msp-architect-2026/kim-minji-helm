@@ -31,6 +31,8 @@ env:
   MINIO_ENDPOINT: "http://minio-minio.storage.svc.cluster.local:9000"
   MODEL_BUCKET: "wafer-model"
   MODEL_KEY: "wafer_defect_model.h5"
+  # 장애 주입 API(/admin/fault). 실험 오버레이(values-exp-*.yaml)에서만 켠다 (RUNBOOK 4.15)
+  FAULT_INJECTION_ENABLED: "false"
 
 secretEnv: {}
 
@@ -111,3 +113,41 @@ tracing:
   enabled: false
   endpoint: http://otel-collector.monitoring.svc:4318
   samplerRatio: "1.0"
+
+# Istio 서비스 메시: Pod 단위 장애 격리(Outlier Detection) 실험용 (RUNBOOK 4.15). 실험 오버레이(values-exp-mesh*.yaml)에서만 켠다.
+# 켜면 Pod에 sidecar 주입 라벨을 붙이고 DestinationRule·VirtualService를 만든다. istiod는 kim-minji-infra istio 차트.
+# 격리 판단은 호출하는 쪽(backend Pod마다 붙은 sidecar)이 각자 한다
+mesh:
+  enabled: false
+  outlierDetection:
+    # 연속 5xx 횟수. 도달하는 즉시 그 Pod를 격리한다 (interval을 기다리지 않음)
+    consecutive5xxErrors: 3
+    # 격리 해제·비율 기반 판정 주기
+    interval: 5s
+    # 격리 시간 = baseEjectionTime × 격리된 횟수 (다시 넣었다가 또 실패하면 30초 → 60초 → 90초 ...)
+    baseEjectionTime: 30s
+    maxEjectionPercent: 50
+    # 0: 패닉 모드(정상 Pod 비율이 기준보다 낮으면 격리를 무시하고 전체에 분산)를 끈다
+    minHealthPercent: 0
+    # timeout·연결 reset 같은 sidecar 자체 오류(local origin)는 5xx 연속 횟수에 섞지 않는다. 섞이면 과부하로 느려진
+    # 정상 Pod가 격리되고, 최대 50% 제한 때문에 트래픽이 전부 장애 Pod로 갈 수 있다. local origin 기준 격리는 사실상 끈다
+    splitExternalLocalOriginErrors: true
+    consecutiveLocalOriginFailures: 1000
+  # 호출하는 sidecar 하나가 ai-serving 전체(Pod 합계)로 여는 연결·대기 요청 상한. 넘으면 sidecar가 바로 503(UO)을 반환한다.
+  # 단일 워커 FastAPI라 Pod당 동시 처리량이 작다. 부하 테스트로 조정 (RUNBOOK C25)
+  connectionPool:
+    tcp:
+      maxConnections: 32
+      connectTimeout: 2s
+    http:
+      http1MaxPendingRequests: 32
+      maxRequestsPerConnection: 0
+  # 요청 하나의 전체 응답 대기 상한 (AI p95 SLO 3초 + 여유)
+  timeout: 5s
+  retries:
+    # 0: 재시도 없음. retries를 생략하면 Istio 기본 정책(2회, 503 등)이 적용돼 Outlier Detection 효과와 섞이므로 명시한다
+    attempts: 0
+    # timeout과 같게 둔다. 더 짧으면 느린 정상 응답이 잘려 재시도되고(실험 D), 그 504가 정상 Pod 오류로 잡힌다
+    perTryTimeout: 5s
+    # 503(장애 Pod 응답)과 연결 실패만 재시도한다. 5xx·gateway-error를 넣으면 timeout까지 재시도 대상이 된다
+    retryOn: 503,connect-failure

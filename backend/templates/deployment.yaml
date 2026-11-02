@@ -15,6 +15,13 @@ spec:
     metadata:
       labels:
         {{- include "common.selectorLabels" . | nindent 8 }}
+        {{- if .Values.mesh.enabled }}
+        # istiod의 sidecar 주입 webhook이 이 라벨이 붙은 Pod에만 istio-proxy를 넣는다 (네임스페이스 라벨 없이)
+        sidecar.istio.io/inject: "true"
+        {{- end }}
+      annotations:
+        # env는 ConfigMap(envFrom)으로 들어가므로, 값이 바뀌면 Pod를 다시 띄우게 한다 (예: 실험 오버레이의 CB 설정)
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
       {{- if .Values.topologySpread.enabled }}
       {{- with .Values.affinity }}

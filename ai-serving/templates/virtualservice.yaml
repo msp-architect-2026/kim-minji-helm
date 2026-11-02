@@ -1,0 +1,28 @@
+{{- if .Values.mesh.enabled }}
+# 메시 안(backend sidecar)에서 ai-serving으로 가는 요청의 timeout·재시도
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: {{ include "common.fullname" . }}
+  labels:
+    {{- include "common.labels" . | nindent 4 }}
+  annotations:
+    # Istio CRD(kim-minji-infra istio)가 아직 없으면 dry-run 실패를 건너뛴다 (retry로 수렴)
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  hosts:
+    - {{ include "common.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+  http:
+    - route:
+        - destination:
+            host: {{ include "common.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+            port:
+              number: {{ .Values.service.port }}
+      timeout: {{ .Values.mesh.timeout }}
+      retries:
+        attempts: {{ .Values.mesh.retries.attempts }}
+        {{- if gt (int .Values.mesh.retries.attempts) 0 }}
+        perTryTimeout: {{ .Values.mesh.retries.perTryTimeout }}
+        retryOn: {{ .Values.mesh.retries.retryOn }}
+        {{- end }}
+{{- end }}

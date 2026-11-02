@@ -1,0 +1,11 @@
+# 실험 D: C + 재시도. 실패한 요청을 다른 Pod로 다시 보내는 효과를 C와 분리해 본다 (RUNBOOK 4.15)
+# 장애 주입 API를 켜고 AI Pod를 2개로 고정한다 (KEDA가 부하에 따라 늘리거나 줄이지 않게)
+env:
+  FAULT_INJECTION_ENABLED: "true"
+keda:
+  minReplicas: 2
+  maxReplicas: 2
+mesh:
+  enabled: true
+  retries:
+    attempts: 2

@@ -1,0 +1,2 @@
+# 실험 B: Circuit Breaker를 application.properties 기본값(창 10, 실패율 50%, OPEN 30초)으로 둔다.
+# 덮어쓸 값이 없다 (실험 라벨 설명용 파일, RUNBOOK 4.15)

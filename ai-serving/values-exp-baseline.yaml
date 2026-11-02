@@ -1,0 +1,7 @@
+# 실험 A (baseline): mesh 없음. kube-proxy가 장애 Pod에도 요청을 계속 보내는지 확인 (RUNBOOK 4.15)
+# 장애 주입 API를 켜고 AI Pod를 2개로 고정한다 (KEDA가 부하에 따라 늘리거나 줄이지 않게)
+env:
+  FAULT_INJECTION_ENABLED: "true"
+keda:
+  minReplicas: 2
+  maxReplicas: 2

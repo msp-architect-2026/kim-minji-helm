@@ -134,11 +134,13 @@ mesh:
     # 다시 격리되지 않는다 (RUNBOOK 4.15 지연 실험: 도착 전 대기 중앙값 4.85s, upstream_cx_overflow 1748, false로는 3회 모두 격리).
     # 대신 과부하로 느려진 정상 Pod도 격리될 수 있다 — maxEjectionPercent 50이라 2개 중 1개까지만 빠진다
     splitExternalLocalOriginErrors: false
-  # 호출하는 sidecar 하나가 ai-serving 전체(Pod 합계)로 여는 연결·대기 요청 상한. 넘으면 sidecar가 바로 503(UO)을 반환한다.
-  # 단일 워커 FastAPI라 Pod당 동시 처리량이 작다. 부하 테스트로 조정 (RUNBOOK C25)
+  # 호출하는 sidecar 하나가 ai-serving 전체(Pod 합계)로 여는 연결·대기 요청 상한.
+  # 연결이 상한에 닿으면 요청은 sidecar 안에서 대기하고(pending), 대기열까지 차면 503(UO)을 반환한다.
+  # maxConnections ≈ RATE × timeout: 응답을 끄는 Pod가 연결을 timeout까지 붙잡아도 대기가 생기지 않는 크기 (20 RPS × 5s).
+  # 32에서는 2초 지연 장애 Pod가 연결을 붙잡아 요청이 sidecar에서 중앙값 4.85초 대기 → 504(RUNBOOK 4.15 5-2·5-3)
   connectionPool:
     tcp:
-      maxConnections: 32
+      maxConnections: 100
       connectTimeout: 2s
     http:
       http1MaxPendingRequests: 32

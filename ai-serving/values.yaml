@@ -129,8 +129,9 @@ mesh:
     maxEjectionPercent: 50
     # 0: 패닉 모드(정상 Pod 비율이 기준보다 낮으면 격리를 무시하고 전체에 분산)를 끈다
     minHealthPercent: 0
-    # false: sidecar의 timeout(504 UT)·연결 reset도 연속 5xx로 센다. true로 두면 "느리게 실패하는 Pod"에 요청이 쌓여
-    # timeout만 나는 동안 다시 격리되지 않는다 (RUNBOOK 4.15 지연 실험: 3회 중 1회 p95 5s·실패 23%, false로는 3회 모두 격리).
+    # false: sidecar의 timeout(504 UT)·연결 reset도 연속 5xx로 센다. true로 두면 "느리게 실패하는 Pod"로 가는 요청이
+    # 연결 풀 상한(아래 maxConnections)에 막혀 호출 sidecar에서 대기하다 timeout으로 끊기고, Pod의 503이 돌아오지 않아
+    # 다시 격리되지 않는다 (RUNBOOK 4.15 지연 실험: 도착 전 대기 중앙값 4.85s, upstream_cx_overflow 1748, false로는 3회 모두 격리).
     # 대신 과부하로 느려진 정상 Pod도 격리될 수 있다 — maxEjectionPercent 50이라 2개 중 1개까지만 빠진다
     splitExternalLocalOriginErrors: false
   # 호출하는 sidecar 하나가 ai-serving 전체(Pod 합계)로 여는 연결·대기 요청 상한. 넘으면 sidecar가 바로 503(UO)을 반환한다.
